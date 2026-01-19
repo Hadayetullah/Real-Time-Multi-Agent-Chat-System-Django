@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+# .env
+venv/
+env/
+/ENV/
+# Other common names for virtual environments
+.venv/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+pip-log.txt
+wheels/
+*.whl
+
+# Django-specific
+*.log
+*.pot
+*.sqlite3  # Ignore SQLite database file (e.g., db.sqlite3)
+local_settings.py  # Ignore local development settings if using a separate file
+
+# Static and Media files (generated during deployment or user uploads)
+# Adjust these paths based on your actual project structure and settings
+/static_collected/
+/media/
+
+# IDE-specific files (optional, can also be set globally)
+.idea/  # Ignore PyCharm project files
+.vscode/ # Ignore VS Code project files
+.DS_Store  # Ignore macOS metadata files
+Thumbs.db  # Ignore Windows thumbnail cache files
