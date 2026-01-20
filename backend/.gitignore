@@ -35,6 +35,8 @@ local_settings.py  # Ignore local development settings if using a separate file
 # Static and Media files (generated during deployment or user uploads)
 # Adjust these paths based on your actual project structure and settings
 /static_collected/
+static/
+staticfiles/
 /media/
 
 # IDE-specific files (optional, can also be set globally)
