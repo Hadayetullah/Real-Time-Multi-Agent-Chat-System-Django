@@ -22,24 +22,21 @@ class AgentSignupView(APIView):
         email = serializer.validated_data["email"]
         password = serializer.validated_data["password"]
 
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={
-                "username": email,
-                "password": None,
-            }
-        )
-
-        if created:
-            user.set_password(password)
-            user.save()
-        else:
-            # Existing user: verify credentials
+        try:
+            user = User.objects.get(email=email)
+            # User exists -> validate password
             if not user.check_password(password):
                 return Response(
                     {"detail": "Invalid credentials"},
                     status=400
                 )
+        except User.DoesNotExist:
+            # Create user properly (NO get_or_create while extending Built-in User model)
+            user = User.objects.create_user(
+                username=email,
+                email=email,
+                password=password,
+            )
 
         otp = str(random.randint(100000, 999999))
         redis_client.setex(f"agent_otp:{email}", 300, otp)
@@ -49,6 +46,7 @@ class AgentSignupView(APIView):
             {"message": "OTP sent", "otp": otp},
             status=200
         )
+
     
 
 
