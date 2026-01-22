@@ -39,6 +39,6 @@ class Message(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Message {self.id}"
+        return f"Session {self.session_id} | {self.sender.username}"
 
 
