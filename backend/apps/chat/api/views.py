@@ -1,7 +1,9 @@
 import random
 from django.db.models import Count, Q
+from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 from apps.chat.models import ChatSession
 from apps.users.models import UserProfile
@@ -40,5 +42,24 @@ class StartChatView(APIView):
         return Response({"session_id": session.id})
 
 
+
+
+class CloseChatSessionAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, chat_id):
+        try:
+            chat = ChatSession.objects.get(
+                id=chat_id,
+                agent=request.user
+            )
+        except ChatSession.DoesNotExist:
+            return Response({"detail": "Chat not found"}, status=404)
+
+        chat.status = ChatSession.STATUS_CLOSED
+        chat.closed_at = timezone.now()
+        chat.save()
+
+        return Response({"detail": "Chat closed successfully"})
 
 

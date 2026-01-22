@@ -2,12 +2,25 @@ import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
+from channels.exceptions import DenyConnection
 
 from apps.chat.models import ChatSession, Message
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        self.chat_id = self.scope["url_route"]["kwargs"]["chat_id"]
+
+        try:
+            self.chat_session = await database_sync_to_async(
+                ChatSession.objects.get
+            )(id=self.chat_id)
+        except ChatSession.DoesNotExist:
+            raise DenyConnection("Chat session does not exist")
+
+        if self.chat_session.status != ChatSession.STATUS_ACTIVE:
+            raise DenyConnection("Chat session is closed")
+    
         self.session_id = self.scope["url_route"]["kwargs"]["session_id"]
         self.room_group_name = f"chat_{self.session_id}"
 
@@ -44,6 +57,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
 
     async def receive(self, text_data):
+        if self.chat_session.status != ChatSession.STATUS_ACTIVE:
+            await self.send_json({
+                "type": "error",
+                "message": "Chat session is closed"
+            })
+            return
+
         data = json.loads(text_data)
         message_text = data.get("message")
 
