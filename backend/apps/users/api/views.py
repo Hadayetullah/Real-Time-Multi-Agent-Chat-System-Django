@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -15,6 +16,8 @@ from .serializers import AgentSignupSerializer, AgentOTPVerifySerializer
 
 
 class AgentSignupView(APIView):
+    throttle_classes = [AnonRateThrottle]
+
     def post(self, request):
         serializer = AgentSignupSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -82,6 +85,8 @@ class AgentOTPVerifyView(APIView):
 
 
 class AgentLoginView(APIView):
+    throttle_classes = [UserRateThrottle]
+
     def post(self, request):
         email = request.data.get("email")
         password = request.data.get("password")

@@ -1,3 +1,4 @@
+import time
 import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -9,6 +10,9 @@ from apps.chat.models import ChatSession, Message
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        self.last_message_ts = 0
+        self.message_count = 0
+
         self.chat_id = self.scope["url_route"]["kwargs"]["chat_id"]
 
         try:
@@ -68,6 +72,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
         message_text = data.get("message")
 
         if not message_text:
+            return
+        
+        now = time.time()
+
+        # Allow max 5 messages per second
+        if now - self.last_message_ts < 1:
+            self.message_count += 1
+        else:
+            self.message_count = 1
+            self.last_message_ts = now
+
+        if self.message_count > 5:
+            if self.message_count > 10:
+                await self.close(code=4008) # Aggressive protection for abusive clients
+
+            await self.send_json({
+                "type": "error",
+                "message": "Rate limit exceeded"
+            })
             return
 
         message = await self.save_message(message_text)
