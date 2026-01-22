@@ -1,3 +1,7 @@
+import logging
+logger = logging.getLogger("chat.websocket")
+
+
 import time
 import json
 
@@ -20,9 +24,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 ChatSession.objects.get
             )(id=self.chat_id)
         except ChatSession.DoesNotExist:
+            logger.warning("WebSocket DENY | chat_id=%s | reason=not_found", self.chat_id)
             raise DenyConnection("Chat session does not exist")
 
         if self.chat_session.status != ChatSession.STATUS_ACTIVE:
+            logger.warning(
+                "WebSocket DENY | chat_id=%s | reason=inactive",
+                self.chat_id
+            )
             raise DenyConnection("Chat session is closed")
     
         self.session_id = self.scope["url_route"]["kwargs"]["session_id"]
@@ -52,6 +61,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         await self.accept()
 
+        logger.info(
+            "WebSocket CONNECT | room=%s | user=%s | role=%s | ip=%s",
+            self.room_group_name,
+            self.user,
+            self.user_type,
+            self.scope.get("client"),
+        )
+
+
+
 
     async def disconnect(self, close_code):
         if hasattr(self, "room_group_name"):
@@ -59,6 +78,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 self.room_group_name,
                 self.channel_name
             )
+
+        logger.info(
+            "WebSocket DISCONNECT | room=%s | user=%s",
+            self.room_group_name,
+            self.user,
+        )
+
+
 
     async def receive(self, text_data):
         if self.chat_session.status != ChatSession.STATUS_ACTIVE:
@@ -104,6 +131,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "timestamp": message.created_at.isoformat(),
             }
         )
+
+        logger.info(
+            "MESSAGE | room=%s | sender=%s | content=%s",
+            self.room_group_name,
+            self.user,
+            message_text[:100],
+        )
+
+
 
     async def chat_message(self, event):
         await self.send(text_data=json.dumps(event))
