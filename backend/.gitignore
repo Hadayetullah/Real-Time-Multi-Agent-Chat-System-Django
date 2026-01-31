@@ -7,7 +7,7 @@ __pycache__/
 .pytest_cache/
 
 # Virtual environment
-# .env
+# .env.local
 .env.production
 
 # Common names for virtual environments

@@ -18,7 +18,8 @@ from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR / ".env.local")
+# load_dotenv(BASE_DIR / ".env.production") # Uncomment for production
 
 
 # Quick-start development settings - unsuitable for production
@@ -28,9 +29,43 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "False")
+DEBUG = os.getenv("DEBUG", "False") == "1"
 
-ALLOWED_HOSTS = []
+# Allowed hosts configuration
+# In development, allow all hosts
+# In production, specify your domain names
+if DEBUG:
+    ALLOWED_HOSTS = ["*"]
+else:
+    ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+
+
+# CORS Configuration
+# Allow frontend to communicate with backend
+# In development, allow localhost origins
+# In production, specify your frontend domain
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True  # Development only
+    CORS_ALLOW_CREDENTIALS = True
+else:
+    CORS_ALLOWED_ORIGINS = os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "https://yourdomain.com"
+    ).split(",")
+    CORS_ALLOW_CREDENTIALS = True
+
+# CORS settings for cookies/auth
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 
 # Application definition
@@ -47,6 +82,7 @@ INSTALLED_APPS = [
     'rest_framework',
     # 'rest_framework_simplejwt',
     'channels',
+    'corsheaders',  # CORS headers for frontend communication
 ]
 
 INSTALLED_APPS += [
@@ -58,6 +94,7 @@ INSTALLED_APPS += [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # CORS middleware (must be before CommonMiddleware)
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -191,6 +228,33 @@ SIMPLE_JWT = {
 }
 
 
+# Email Configuration
+# Using console backend for development (prints emails to console)
+# For production, use SMTP backend with real email server
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND", 
+    "django.core.mail.backends.console.EmailBackend"  # Development default
+)
+
+# SMTP settings for production
+# Uncomment and configure these when deploying
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")  # e.g., smtp.gmail.com
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))  # Usually 587 for TLS
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")  # Your email address
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")  # App password
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@chatapp.com")
+
+# Production SMTP example configuration (Gmail):
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'your-email@gmail.com'
+# EMAIL_HOST_PASSWORD = 'your-app-specific-password'  # Not regular password!
+# DEFAULT_FROM_EMAIL = 'Real-Time Chat <noreply@chatapp.com>'
+
+
 # Logger Configuration to debug logs
 LOGGING = {
     "version": 1,
@@ -216,6 +280,3 @@ LOGGING = {
         "level": "INFO",
     },
 }
-
-
-
