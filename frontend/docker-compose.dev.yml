@@ -1,0 +1,36 @@
+# Docker Compose Configuration for Frontend Development
+
+services:
+  # Next.js Frontend Service
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/local/Dockerfile
+    container_name: chat_frontend
+    # Mount code as volume for hot-reloading
+    volumes:
+      - .:/app
+      # Exclude node_modules and .next for performance
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    # Load environment variables
+    env_file:
+      - .env.local
+    # Additional environment variables
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true  # Enable polling for file changes in Docker
+    restart: unless-stopped
+    # Hot-reload command
+    command: npm run dev
+    # Connect to same network as backend for inter-service communication
+    networks:
+      - chat_network
+
+# Use the same network as backend services
+networks:
+  chat_network:
+    external: true
+    name: backend_chat_network
