@@ -1,0 +1,100 @@
+# Docker Compose for Backend Local Development
+# This file is specifically for local development environment
+# Run from: backend/docker/local/
+
+
+services:
+  # Django Backend Service (Development)
+  backend:
+    build:
+      context: ../..                    # Build context is backend root
+      dockerfile: docker/local/Dockerfile
+    container_name: chat_backend_dev
+    # Mount code for hot-reload during development
+    volumes:
+      - ../../:/app                     # Mount entire backend directory
+      - /app/__pycache__                # Exclude Python cache
+      - /app/**/__pycache__
+    ports:
+      - "8000:8000"                     # Expose backend on port 8000
+    # Service dependencies
+    depends_on:
+      postgres:
+        condition: service_healthy      # Wait for Postgres to be healthy
+      redis:
+        condition: service_started      # Wait for Redis to start
+    # Load environment variables from local .env file
+    env_file:
+      - ../../.env.local
+    # Development command with auto-reload
+    command: >
+      sh -c "
+        echo '🔄 Waiting for database...' &&
+        python manage.py wait_for_db &&
+        echo '📊 Running migrations...' &&
+        python manage.py migrate &&
+        echo '📁 Collecting static files...' &&
+        python manage.py collectstatic --noinput &&
+        echo '🚀 Starting development server...' &&
+        uvicorn config.asgi:application --host 0.0.0.0 --port 8000 --reload
+      "
+    restart: unless-stopped
+    networks:
+      - chat_network
+
+  # PostgreSQL Database (Development)
+  postgres:
+    image: postgres:16-alpine
+    container_name: chat_postgres_dev
+    environment:
+      POSTGRES_DB: chatdb
+      POSTGRES_USER: chatuser
+      POSTGRES_PASSWORD: chatpass
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+    volumes:
+      # Persist database data
+      - postgres_dev_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    # Health check to ensure database is ready
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chatuser -d chatdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - chat_network
+
+  # Redis Cache & Channels Layer (Development)
+  redis:
+    image: redis:7-alpine
+    container_name: chat_redis_dev
+    ports:
+      - "6379:6379"
+    volumes:
+      # Persist Redis data (optional for development)
+      - redis_dev_data:/data
+    # Redis configuration for development
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - chat_network
+
+# Named volumes for data persistence
+volumes:
+  postgres_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+
+# Custom network for service communication
+networks:
+  chat_network:
+    driver: bridge
+    name: chat_backend_dev_network

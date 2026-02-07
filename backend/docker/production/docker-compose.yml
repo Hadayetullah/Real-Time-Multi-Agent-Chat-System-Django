@@ -1,0 +1,123 @@
+# Docker Compose for Backend Production
+# This file is for production deployment
+# Run from: backend/docker/production/
+
+
+services:
+  # Django Backend Service (Production)
+  backend:
+    build:
+      context: ../..
+      dockerfile: docker/production/Dockerfile
+    container_name: chat_backend_prod
+    # No code volumes in production (code is baked into image)
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - ../../.env.production
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - DEBUG=0
+    # Production command with Gunicorn workers
+    command: >
+      sh -c "
+        echo '🔄 Waiting for database...' &&
+        python manage.py wait_for_db &&
+        echo '📊 Running migrations...' &&
+        python manage.py migrate --noinput &&
+        echo '📁 Collecting static files...' &&
+        python manage.py collectstatic --noinput &&
+        echo '🚀 Starting production server with Gunicorn...' &&
+        gunicorn config.asgi:application -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --workers 4 --worker-class uvicorn.workers.UvicornWorker --timeout 60 --access-logfile - --error-logfile -
+      "
+    restart: always
+    networks:
+      - chat_network
+    # Resource limits for production stability
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+  # PostgreSQL Database (Production)
+  postgres:
+    image: postgres:16-alpine
+    container_name: chat_postgres_prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-chatdb}
+      POSTGRES_USER: ${POSTGRES_USER:-chatuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+    volumes:
+      # Persist production database data
+      - postgres_prod_data:/var/lib/postgresql/data
+      # Optional: Mount backup directory
+      - ../../backups:/backups
+    # Don't expose port externally in production (security)
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chatuser} -d ${POSTGRES_DB:-chatdb}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    restart: always
+    networks:
+      - chat_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Redis Cache & Channels Layer (Production)
+  redis:
+    image: redis:7-alpine
+    container_name: chat_redis_prod
+    # Don't expose port externally in production
+    expose:
+      - "6379"
+    volumes:
+      - redis_prod_data:/data
+    # Production Redis configuration with password
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-changeme} --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+    networks:
+      - chat_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+volumes:
+  postgres_prod_data:
+    driver: local
+  redis_prod_data:
+    driver: local
+
+networks:
+  chat_network:
+    driver: bridge
+    name: chat_backend_prod_network

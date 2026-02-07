@@ -1,0 +1,44 @@
+# Docker Compose for Frontend Local Development
+# This file is specifically for local development environment
+# Run from: frontend/docker/local/
+
+
+services:
+  # Next.js Frontend Service (Development)
+  frontend:
+    build:
+      context: ../..                    # Build context is frontend root
+      dockerfile: docker/local/Dockerfile
+    container_name: chat_frontend_dev
+    # Mount code for hot-reload during development
+    volumes:
+      - ../../:/app                     # Mount entire frontend directory
+      - /app/node_modules               # Exclude node_modules (use container's)
+      - /app/.next                      # Exclude Next.js build cache
+    ports:
+      - "3000:3000"                     # Expose frontend on port 3000
+    # Load environment variables from local .env file
+    env_file:
+      - ../../.env.local
+    # Additional environment variables for development
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true          # Enable file watching in Docker
+      - CHOKIDAR_USEPOLLING=true        # Enable polling for file changes
+    # Development command with hot-reload
+    command: npm run dev
+    restart: unless-stopped
+    # Connect to backend network for API communication
+    networks:
+      - frontend_network
+      - backend_network
+
+# Custom network for frontend services
+networks:
+  frontend_network:
+    driver: bridge
+    name: chat_frontend_dev_network
+  # External network to connect with backend
+  backend_network:
+    external: true
+    name: chat_backend_dev_network

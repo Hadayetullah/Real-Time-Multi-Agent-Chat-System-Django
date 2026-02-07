@@ -86,6 +86,7 @@ INSTALLED_APPS = [
 ]
 
 INSTALLED_APPS += [
+    "apps.core",     # Core utilities and management commands
     "apps.users",
     "apps.chat",
 ]

@@ -1,17 +1,17 @@
 Django==5.0.1
 djangorestframework==3.14.0
-channels==4.0.0
-channels-redis==4.2.0
-psycopg2-binary==2.9.9
-uvicorn[standard]
+channels==4.0.0 # For WebSocket support between frontend and backend
+channels-redis==4.2.0 # For WebSocket support with Redis as the channel layer (To communicate between multiple instances of the backend in production)
+psycopg2-binary==2.9.9 # PostgreSQL database adapter for Python (Use psycopg2-binary for development, switch to psycopg2 in production for better performance)
+uvicorn[standard] # ASGI server for running the Django application with WebSocket support in development (Use gunicorn with uvicorn workers in production)
 python-dotenv==1.0.1
 djangorestframework-simplejwt==5.3.1
-redis==5.0.1
-pytest
-pytest-django
+redis==5.0.1 # For caching, WebSocket support, and Temporary data storage
+pytest # For testing
+pytest-django # For testing Django applications
 pytest-cov  # For code coverage reports
-django-cors-headers==4.3.1
-# CORS headers for frontend-backend communication
+django-cors-headers==4.3.1 # CORS headers for frontend-backend communication
+gunicorn==21.2.0 # WSGI server for production deployment
 
 ### Future enhancements
 # # Email sending package for OTP functionality

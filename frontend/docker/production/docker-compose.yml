@@ -1,0 +1,44 @@
+# Docker Compose for Frontend Production
+# This file is for production deployment
+# Run from: frontend/docker/production/
+
+
+services:
+  # Next.js Frontend Service (Production)
+  frontend:
+    build:
+      context: ../..
+      dockerfile: docker/production/Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.yourdomain.com}
+        - NEXT_PUBLIC_WS_BASE=${NEXT_PUBLIC_WS_BASE:-wss://api.yourdomain.com}
+    container_name: chat_frontend_prod
+    # No code volumes in production
+    ports:
+      - "3000:3000"
+    env_file:
+      - ../../.env.production
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+    restart: always
+    networks:
+      - frontend_network
+      - backend_network
+    # Resource limits for production
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+networks:
+  frontend_network:
+    driver: bridge
+    name: chat_frontend_prod_network
+  backend_network:
+    external: true
+    name: chat_backend_prod_network
